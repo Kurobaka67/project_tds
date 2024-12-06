@@ -1,65 +1,141 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
+import 'package:project_transdata/my_globals.dart' as globals;
 
-import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
 import 'package:project_transdata/model/request_model.dart';
-
-List<RequestModel> requests = [];
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RequestService {
-  Future<void> getAllRequests() async {
-    try {
-      var response = await rootBundle.loadString('assets/data/requests.json');
-      if (response.isNotEmpty) {
-        requests = requestModelFromJson(response);
-      }
-    } catch (e) {
-      log(e.toString());
-    }
-  }
-
   Future<List<RequestModel>?> getRequests() async {
     try {
-      if (requests.isNotEmpty) {
-        return requests;
-      }
-    } catch (e) {
-      log(e.toString());
-    }
-    return null;
-  }
-
-  Future<RequestModel?> saveRequests(String title, String description) async {
-    try {
-      var nextId = await getNextIdRequest();
-      if(nextId != -1){
-        RequestModel rm = RequestModel(id: nextId, title: title, description: description, person: 'Jonathan', response: []);
-        requests.add(rm);
-        return rm;
-      }
-    } catch (e) {
-      log(e.toString());
-    }
-    return null;
-  }
-
-  Future<int> getNextIdRequest() async {
-    try {
-      var nextId = 1;
-      List<RequestModel> lr = [];
-      for (var r in requests) {
-        lr.add(RequestModel(id: r.id, title: r.title, description: r.description, person: r.person, response: r.response));
-      }
-      lr.sort((a, b) => a.id-b.id);
-      for(var r in lr) {
-        if(r.id != nextId){
-          return nextId;
+      SharedPreferencesAsync? prefs = SharedPreferencesAsync();
+      final String username = await prefs.getString('username') ?? '';
+      final String useremail = await prefs.getString('useremail') ?? '';
+      var bytes = utf8.encode(username+useremail);
+      var digest = sha256.convert(bytes);
+      var client = http.Client();
+      var uri = Uri.parse('${globals.url}/requests');
+      var response = await client.get(uri,
+        headers: {
+          "x-api-key": digest.toString()
         }
-        nextId++;
+      ).timeout(Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        return requestModelFromJson(const Utf8Decoder().convert(response.bodyBytes));
       }
-      return nextId;
+    } on TimeoutException catch (e) {
+      log(e.toString());
+      return null;
+    }
+    catch (e) {
+      log(e.toString());
+    }
+    return null;
+  }
+
+  Future<List<RequestModel>?> getRequestsByName() async {
+    try{
+      SharedPreferencesAsync? prefs = SharedPreferencesAsync();
+      final String username = await prefs.getString('username') ?? '';
+      final String useremail = await prefs.getString('useremail') ?? '';
+      var bytes = utf8.encode(username+useremail);
+      var digest = sha256.convert(bytes);
+      var client = http.Client();
+      var uri = Uri.parse('${globals.url}/requests/name');
+      var response = await client.get(uri,
+          headers: {
+            "x-api-key": digest.toString()
+          }
+      ).timeout(Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        return requestModelFromJson(const Utf8Decoder().convert(response.bodyBytes));
+      }
+    } on TimeoutException catch (e) {
+      log(e.toString());
+      return null;
+    }
+    catch (e) {
+      log(e.toString());
+    }
+    return null;
+  }
+
+  Future<bool> saveRequests(String title, String description) async {
+    try {
+      SharedPreferencesAsync? prefs = SharedPreferencesAsync();
+      final String username = await prefs.getString('username') ?? '';
+      final String useremail = await prefs.getString('useremail') ?? '';
+      var bytes = utf8.encode(username+useremail);
+      var digest = sha256.convert(bytes);
+      var client = http.Client();
+      var uri = Uri.parse('${globals.url}/requests');
+      var response = await client.post(uri,
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": digest.toString()
+          },
+          body: jsonEncode({
+            "title": title,
+            "description": description,
+          })).timeout(Duration(seconds: 5));
+      if (response.statusCode == 201) {
+        return true;
+      }
     } catch (e) {
       log(e.toString());
     }
-    return -1;
+    return false;
+  }
+
+  Future<String> deleteRequests(int request_id) async{
+    try {
+      SharedPreferencesAsync? prefs = SharedPreferencesAsync();
+      final String username = await prefs.getString('username') ?? '';
+      final String useremail = await prefs.getString('useremail') ?? '';
+      var bytes = utf8.encode(username+useremail);
+      var digest = sha256.convert(bytes);
+      var client = http.Client();
+      var uri = Uri.parse('${globals.url}/requests/$request_id');
+      var response = await client.delete(uri,
+          headers: {
+            "x-api-key": digest.toString()
+          }).timeout(Duration(seconds: 5));
+      if (response.statusCode == 201) {
+        return 'Message supprimé avec succès!';
+      }
+    } catch (e) {
+      log(e.toString());
+    }
+    return 'Erreur lors de la suppression';
+  }
+
+  Future<List<RequestModel>?> getArchiveRequest() async {
+    try{
+      print("hey");
+      SharedPreferencesAsync? prefs = SharedPreferencesAsync();
+      final String username = await prefs.getString('username') ?? '';
+      final String useremail = await prefs.getString('useremail') ?? '';
+      var bytes = utf8.encode(username+useremail);
+      var digest = sha256.convert(bytes);
+      var client = http.Client();
+      var uri = Uri.parse('${globals.url}/requests/archived');
+      var response = await client.get(uri,
+          headers: {
+            "x-api-key": digest.toString()
+          }).timeout(Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        return requestModelFromJson(const Utf8Decoder().convert(response.bodyBytes));
+      }
+    } on TimeoutException catch (e) {
+      log(e.toString());
+      return null;
+    }
+    catch (e) {
+      log(e.toString());
+    }
+    return null;
   }
 }

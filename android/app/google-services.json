@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "58870958324",
+    "project_id": "tds-notification-fb812",
+    "storage_bucket": "tds-notification-fb812.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58870958324:android:393ea5e8c10ced32b1f6a1",
+        "android_client_info": {
+          "package_name": "com.example.project_transdata"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4MlvvgouthOrx3eNvbibBfJOMTA2x2Zw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

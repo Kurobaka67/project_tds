@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:form_field_validator/form_field_validator.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/main_page.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import '../logger.dart';
+import '../screens/page.dart';
+import '../services/users_services.dart';
+
+import 'package:project_transdata/my_globals.dart' as globals;
 
 class FormLogin extends StatefulWidget {
   const FormLogin({super.key});
@@ -11,45 +16,63 @@ class FormLogin extends StatefulWidget {
 }
 
 class _FormLoginState extends State<FormLogin> {
-  SharedPreferences? prefs;
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
-  bool isLoggedIn = false;
+  FocusNode myFocusNode = FocusNode();
+  bool isLoading = false;
+
   String name = '';
   String email = '';
 
   @override
   void initState() {
     super.initState();
-    autoLogIn();
+    myFocusNode.addListener(() {
+      if (!myFocusNode.hasFocus) {
+        SystemChrome.restoreSystemUIOverlays();
+      }
+    });
+    /*_keyboardVisibilityController.onChange.listen((bool visible) {
+      setState(() {
+        _keyboardVisible = visible;
+      });
+
+      if (!visible) {
+        //SystemChrome.restoreSystemUIOverlays();
+      }
+    });*/
   }
 
-  void autoLogIn() async {
-    prefs = await SharedPreferences.getInstance();
-    final String userId = prefs?.getString('username') ?? '';
-    final String useremail = prefs?.getString('useremail') ?? '';
-    if (userId != '' && useremail != '') {
-      setState(() {
-        isLoggedIn = true;
-        name = userId;
-        email = useremail;
-      });
-      return;
-    }
+  @override
+  void dispose() {
+    myFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> loginUser() async {
-    print('login');
-    prefs = await SharedPreferences.getInstance();
-    prefs?.setString('username', nameController.text);
-    prefs?.setString('useremail', emailController.text);
+    setState(() {
+      isLoading = true;
+    });
     setState(() {
       name = nameController.text;
-      email = emailController.text;
-      isLoggedIn = true;
+      email = emailController.text.toLowerCase();
+      isLoading = false;
     });
+    print(globals.url);
+    //throw Exception('Va te faire voir');
+    Widget? screen = (await UsersService().login(name, email));
+
     nameController.clear();
     emailController.clear();
+    if(screen != null) {
+      goToScreen(screen);
+    }
+  }
+
+  void goToScreen(Widget? screen) {
+    if(screen != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
+    }
   }
 
   @override
@@ -64,6 +87,10 @@ class _FormLoginState extends State<FormLogin> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
           child: TextFormField(
+            focusNode: myFocusNode,
+            onEditingComplete: () {
+              SystemChrome.restoreSystemUIOverlays();
+            },
             keyboardType: TextInputType.name,
             autofillHints: const <String>[AutofillHints.name],
             controller: nameController,
@@ -161,27 +188,35 @@ class _FormLoginState extends State<FormLogin> {
             onPressed: () {
               if (_formkey.currentState!.validate()) {
                 loginUser();
-                _navigateToNextScreen(context);
+                logger.i('Connexion');
+                //_navigateToNextScreen(context);
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.secondary,
-              fixedSize: const Size(200, 60),
+              fixedSize: Size(isLoading?210:175, 60),
             ),
-            child: Text(
-              'Connexion',
-              style: TextStyle(
-                color: theme.colorScheme.onSecondary,
-                fontSize: 25,
-              ),
+            child: Row(
+              children: [
+                Text(
+                  'Connexion',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSecondary,
+                    fontSize: 25,
+                  ),
+                ),
+                const Spacer(),
+                if (isLoading)
+                  LoadingAnimationWidget.fourRotatingDots(
+                    size: 40,
+                    color: Colors.black45,
+                  ),
+              ],
             )
         )
       ]),
     );
   }
 
-  void _navigateToNextScreen(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => const MainPage()));
-  }
+
 }

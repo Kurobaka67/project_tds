@@ -11,29 +11,25 @@ class RequestModel {
     required this.id,
     required this.title,
     required this.description,
-    required this.person,
-    required this.response,
+    required this.userId,
   });
 
   int id;
   String title;
   String description;
-  String person;
-  List response;
+  int userId;
 
   factory RequestModel.fromJson(Map<String, dynamic> json) => RequestModel(
     id: json["id"],
     title: json["title"],
     description: json["description"],
-    person: json["person"],
-    response: json["response"],
+    userId: json["user_id"],
   );
 
   Map<String, dynamic> toJson() => {
     "id": id,
     "title": title,
     "description": description,
-    "person": person,
-    "response": response,
+    "user_id": userId,
   };
 }
